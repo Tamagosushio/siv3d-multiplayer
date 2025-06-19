@@ -1,4 +1,6 @@
-﻿# include <Siv3D.hpp>
+﻿# pragma once
+
+# include <Siv3D.hpp>
 
 namespace TikTakToe {
 
@@ -9,11 +11,16 @@ namespace TikTakToe {
   };
 
   struct Operation {
+    constexpr static uint8 code = 67; // データ送受信時のイベントコード
     Point pos; // 操作される位置
     Cell cell_type; // 配置するセルの種類
     Operation() {}
     Operation(const Point& pos, const Cell cell_type)
       : pos(pos), cell_type(cell_type) {}
+    template<class Archive>
+    void SIV3D_SERIALIZE(Archive& archive) {
+      archive(pos, cell_type);
+    }
   };
 
   class Game {
@@ -22,7 +29,7 @@ namespace TikTakToe {
     size_t cell_size_ = 100;
     Point cell_offset_{ 100, 100 };
     Font font_symbol_{ FontMethod::MSDF, static_cast<int32>(cell_size_), Typeface::Bold };
-    Cell player_symbol_;
+    Cell player_symbol_ = Cell::None;
     Point get_cell_point_(const size_t y, const size_t x) const;
     Rect get_cell_rect_(const Point& pos) const;
     Rect get_cell_rect_(const size_t y, const size_t x) const;
@@ -30,10 +37,12 @@ namespace TikTakToe {
     Game() {}
     Game(const size_t grid_size, Cell player_simbol);
     void initialize(const size_t grid_size, Cell player_simbol);
-    void operate(const Operation& op);
-    Cell is_finished(void) const;
+    Optional<Cell> operate(const Operation& op);
+    Optional<Cell> is_finished(void) const;
+    Cell get_symbol(void) const;
     void draw(void) const;
     void update(void);
+    Optional<Operation> get_operation(void) const;
   };
   Point Game::get_cell_point_(const size_t y, const size_t x) const {
     return Point(x * cell_size_, y * cell_size_) + cell_offset_;
@@ -55,12 +64,12 @@ namespace TikTakToe {
     player_symbol_ = player_symbol;
   }
 
-  void Game::operate(const Operation& op) {
+  Optional<Cell> Game::operate(const Operation& op) {
     grid_[op.pos] = op.cell_type;
+    return is_finished();
   }
 
-  Cell Game::is_finished(void) const {
-    Cell winner = Cell::None;
+  Optional<Cell> Game::is_finished(void) const {
     Cell cell_type;
     // 行走査
     for (size_t col : step(grid_.height())) {
@@ -75,7 +84,7 @@ namespace TikTakToe {
         }
       }
       if (row_ok) {
-        winner = cell_type;
+        return cell_type;
       }
     }
     // 列走査
@@ -91,7 +100,7 @@ namespace TikTakToe {
         }
       }
       if (col_ok) {
-        winner = cell_type;
+        return cell_type;
       }
     }
     // 対角線走査
@@ -105,7 +114,7 @@ namespace TikTakToe {
         }
       }
       if (diagonal_ok) {
-        winner = cell_type;
+        return cell_type;
       }
     }
     cell_type = grid_[grid_.height()-1][0];
@@ -118,22 +127,33 @@ namespace TikTakToe {
         }
       }
       if (diagonal_ok) {
-        winner = cell_type;
+        return cell_type;
       }
     }
-    return winner;
+    // 引き分け判定
+    for (size_t col : step(grid_.height())) {
+      for (size_t row : step(grid_.width())) {
+        if (grid_.at(col, row) == Cell::None) return none;
+      }
+    }
+    return Cell::None;
   }
 
-  void Game::update(void) {
+  Cell Game::get_symbol(void) const {
+    return player_symbol_;
+  }
+
+  void Game::update(void) {}
+
+  Optional<Operation> Game::get_operation(void) const { 
     for (size_t h = 0; h < grid_.height(); h++) {
       for (size_t w = 0; w < grid_.width(); w++) {
-        if (get_cell_rect_(h, w).leftClicked()) {
-          operate(Operation{
-            Point(w,h), player_symbol_
-          });
+        if (get_cell_rect_(h, w).leftClicked() and grid_.at(h,w) == Cell::None) {
+          return Operation{ Point(w,h), player_symbol_ };
         }
       }
     }
+    return none;
   }
 
   void Game::draw(void) const {
