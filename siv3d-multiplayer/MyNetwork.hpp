@@ -15,12 +15,7 @@ public:
 private:
 
   Array<LocalPlayer> m_localPlayers;
-  TikTakToe::Game game;
-  bool is_started = false;
-  bool is_turn = false;
-  bool is_finished = false;
-  TikTakToe::Cell winner = TikTakToe::Cell::None;
-  Font font_detail{FontMethod::MSDF, 256, Typeface::Bold};
+  TicTacToe::Game game;
 
   void connectReturn(
     [[maybe_unused]] const int32 errorCode,
@@ -62,52 +57,18 @@ private:
 
 void MyNetwork::update_game(void) {
   game.update();
-  Optional<TikTakToe::Operation> op = game.get_operation();
-  if (is_started and op and is_turn and not is_finished) {
+  Optional<TicTacToe::Operation> op = game.get_operation();
+  if (op) {
     sendEvent(
-      TikTakToe::Operation::code,
+      TicTacToe::Operation::code,
       Serializer<MemoryWriter>{}(*op)
     );
-    is_turn = false;
-    Optional<TikTakToe::Cell> result = game.operate(*op);
-    if (result) {
-      is_finished = true;
-      winner = *result;
-    }
+    game.operate(*op);
   }
 }
 
 void MyNetwork::draw(void) const {
-  Vec2 draw_text_center{ Vec2{ Scene::Center().x, Scene::Center().y * 1.5 } };
-  if (is_started) {
-    game.draw();
-    if (is_finished) {
-      font_detail(
-        winner == TikTakToe::Cell::None
-          ? U"Draw"
-          : winner == game.get_symbol()
-            ? U"You Win!"
-            : U"You Lose"
-      ).drawAt(
-        128,
-        draw_text_center,
-        winner == TikTakToe::Cell::None
-          ? Palette::Black
-          : winner == game.get_symbol()
-            ? Palette::Red
-            : Palette::Blue
-      );
-    }
-    else {
-      font_detail(
-        is_turn ? U"Your Turn!" : U"Not Your Turn"
-      ).drawAt(
-        128,
-        draw_text_center,
-        is_turn ? Palette::Red : Palette::Blue
-      );
-    }
-  }
+  game.draw();
 }
 
 
@@ -208,9 +169,7 @@ void MyNetwork::joinRoomEventAction(
     }
   }
   if (m_localPlayers.size() == MaxPlayers) {
-    game.initialize(3, isHost() ? TikTakToe::Cell::Circle : TikTakToe::Cell::Cross);
-    is_turn = isHost();
-    is_started = true;
+    game.initialize(3, isHost() ? TicTacToe::Cell::Circle : TicTacToe::Cell::Cross);
   }
 }
 
@@ -233,10 +192,7 @@ void MyNetwork::leaveRoomEventAction(
       Print << U"- [{}] {} (ID: {}) {}"_fmt(player.localID, player.userName, player.userID, player.isHost ? U"(host)" : U"");
     }
   }
-  is_started = false;
-  is_turn = false;
-  is_finished = false;
-  winner = TikTakToe::Cell::None;
+  game.initialize(0, TicTacToe::Cell::None);
 }
 
 void MyNetwork::leaveRoomReturn(
@@ -253,10 +209,7 @@ void MyNetwork::leaveRoomReturn(
     }
     return;
   }
-  is_started = false;
-  is_turn = false;
-  is_finished = false;
-  winner = TikTakToe::Cell::None;
+  game.initialize(0, TicTacToe::Cell::None);
 }
 
 
@@ -266,18 +219,13 @@ void MyNetwork::customEventAction(
   const uint8 eventCode,
   Deserializer<MemoryViewReader>& reader
 ) {
-  if (eventCode == TikTakToe::Operation::code) {
-    TikTakToe::Operation op;
+  if (eventCode == TicTacToe::Operation::code) {
+    TicTacToe::Operation op;
     reader(op);
     if (m_verbose) {
       Print << U"<<< [" << playerID << U"] からの TikTakToe::Operation(" << op.pos << U", " << static_cast<int>(op.cell_type) << U") を受信";
     }
-    is_turn = true;
-    Optional<TikTakToe::Cell> result = game.operate(op);
-    if (result) {
-      is_finished = true;
-      winner = *result;
-    }
+    game.operate(op);
   }
 }
 
