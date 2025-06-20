@@ -29,11 +29,11 @@ namespace TicTacToe {
     size_t cell_size_ = 100;
     Point cell_offset_{ 100, 100 };
     Cell player_symbol_ = Cell::None;
-    bool is_started = false;
-    bool is_turn = false;
-    bool is_finished = false;
-    Optional<Cell> winner = none;
-    Font font_detail{ FontMethod::MSDF, 256, Typeface::Bold };
+    bool is_started_ = false;
+    bool is_turn_ = false;
+    bool is_finished_ = false;
+    Optional<Cell> winner_ = none;
+    Font font_detail_{ FontMethod::MSDF, 256, Typeface::Bold };
     Font font_symbol_{ FontMethod::MSDF, static_cast<int32>(cell_size_), Typeface::Bold };
     Point get_cell_point_(const size_t y, const size_t x) const;
     Rect get_cell_rect_(const Point& pos) const;
@@ -42,12 +42,14 @@ namespace TicTacToe {
     Game() {}
     Game(const size_t grid_size, Cell player_simbol);
     void initialize(const size_t grid_size, Cell player_simbol);
+    void reset(void);
     Optional<Cell> operate(const Operation& op);
     void calc_result(void);
     Cell get_symbol(void) const;
     void draw(void) const;
     void update(void);
     Optional<Operation> get_operation(void) const;
+    void debug(void);
   };
   Point Game::get_cell_point_(const size_t y, const size_t x) const {
     return Point(x * cell_size_, y * cell_size_) + cell_offset_;
@@ -67,17 +69,18 @@ namespace TicTacToe {
     grid_.clear();
     grid_.resize(grid_size, grid_size, Cell::None);
     player_symbol_ = player_symbol;
-    is_started = true;
-    bool is_turn = (player_symbol_ == Cell::Circle);
-    bool is_finished = false;
-    Optional<Cell> winner = none;
+    is_started_ = true;
+    is_turn_ = (player_symbol_ == Cell::Circle);
+    is_finished_ = false;
+    Optional<Cell> winner_ = none;
   }
 
   Optional<Cell> Game::operate(const Operation& op) {
     grid_[op.pos] = op.cell_type;
-    is_turn = (player_symbol_ != op.cell_type);
+    is_turn_ = (player_symbol_ != op.cell_type);
     calc_result();
-    return winner;
+    if (winner_) is_finished_ = true;
+    return winner_;
   }
 
   void Game::calc_result(void) {
@@ -95,7 +98,7 @@ namespace TicTacToe {
       Optional<Cell> result
         = check_line([&](size_t i) { return grid_[col][i]; }, grid_.width());
       if (result) {
-        winner = *result;
+        winner_ = *result;
         return;
       }
     }
@@ -104,7 +107,7 @@ namespace TicTacToe {
       Optional<Cell> result
         = check_line([&](size_t i) {return grid_[i][row]; }, grid_.height());
       if (result) {
-        winner = *result;
+        winner_ = *result;
         return;
       }
     }
@@ -112,21 +115,21 @@ namespace TicTacToe {
     Optional<Cell> result1
       = check_line([&](size_t i) { return grid_[i][i]; }, grid_.height());
     if (result1) {
-      winner = *result1;
+      winner_ = *result1;
       return;
     }
     // 右上から左下
     Optional<Cell> result2
       = check_line([&](size_t i) { return grid_[grid_.height() -1 - i][i]; }, grid_.height());
     if (result2) {
-      winner = *result2;
+      winner_ = *result2;
       return;
     }
     // 引き分けチェック（None が残っていないか）
     for (const Point& p : Step2D(Point{ 0,0 }, grid_.size(), Point{1,1})) {
       if (grid_[p] == Cell::None) return;
     }
-    winner = Cell::None; // 引き分け
+    winner_ = Cell::None; // 引き分け
   }
 
   Cell Game::get_symbol(void) const {
@@ -136,8 +139,7 @@ namespace TicTacToe {
   void Game::update(void) {}
 
   Optional<Operation> Game::get_operation(void) const {
-    Print << (player_symbol_ == Cell::Circle ? U"O" : U"X");
-    if (not (is_started and is_turn and not is_finished)) return none;
+    if (not (is_started_ and is_turn_ and not is_finished_)) return none;
     for (size_t h = 0; h < grid_.height(); h++) {
       for (size_t w = 0; w < grid_.width(); w++) {
         if (get_cell_rect_(h, w).leftClicked() and grid_.at(h,w) == Cell::None) {
@@ -149,7 +151,7 @@ namespace TicTacToe {
   }
 
   void Game::draw(void) const {
-    if (not is_started) return;
+    if (not is_started_) return;
     for (size_t h = 0; h < grid_.height(); h++) {
       for (size_t w = 0; w < grid_.width(); w++) {
         // グリッドを描画
@@ -165,32 +167,45 @@ namespace TicTacToe {
       }
     }
     Vec2 draw_text_center{ Vec2{ Scene::Center().x, Scene::Center().y * 1.5 } };
-    Print << (is_turn ? U"Your Turn!" : U"Not Your Turn");
-    if (is_finished) {
-      font_detail(
-        winner == Cell::None
+    if (is_finished_) {
+      font_detail_(
+        winner_ == Cell::None
           ? U"Draw"
-          : winner == player_symbol_
+          : winner_ == player_symbol_
             ? U"You Win!"
             : U"You Lose"
       ).drawAt(
         128,
         draw_text_center,
-        winner == Cell::None
+        winner_ == Cell::None
           ? Palette::Black
-          : winner == player_symbol_
+          : winner_ == player_symbol_
             ? Palette::Red
             : Palette::Blue
       );
     } else {
-      font_detail(
-        is_turn ? U"Your Turn!" : U"Not Your Turn"
+      font_detail_(
+        is_turn_ ? U"Your Turn!" : U"Not Your Turn"
       ).drawAt(
         128,
         draw_text_center,
-        is_turn ? Palette::Red : Palette::Blue
+        is_turn_ ? Palette::Red : Palette::Blue
       );
     }
+  }
+
+  void Game::debug(void) {
+    Cell o = Cell::Circle;
+    Cell x = Cell::Cross;
+    Cell n = Cell::None;
+    grid_ = {
+      {o, x, o},
+      {o, n, x},
+      {x, x, x}
+    };
+    calc_result();
+    if (winner_) Console << static_cast<int>(*winner_);
+    else Console << none;
   }
 
 };

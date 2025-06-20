@@ -6,10 +6,11 @@ void Main() {
   Window::Resize(1280, 720);
   const std::string secretAppID{ SIV3D_OBFUSCATE(PHOTON_APP_ID) };
   MyNetwork network{ secretAppID, U"1.0", Verbose::Yes };
-
+  //TicTacToe::Game game(3, TicTacToe::Cell::Circle);
+  //game.debug();
   while (System::Update()) {
     network.update();
-
+    
     network.update_game();
     network.draw();
 
