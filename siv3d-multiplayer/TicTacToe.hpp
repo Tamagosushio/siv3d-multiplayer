@@ -72,7 +72,16 @@ namespace TicTacToe {
     is_started_ = true;
     is_turn_ = (player_symbol_ == Cell::Circle);
     is_finished_ = false;
-    Optional<Cell> winner_ = none;
+    winner_ = none;
+  }
+
+  void Game::reset(void) {
+    grid_.clear();
+    player_symbol_ = Cell::None;
+    is_started_ = false;
+    is_turn_ = false;
+    is_finished_ = false;
+    winner_ = none;
   }
 
   Optional<Cell> Game::operate(const Operation& op) {
@@ -195,18 +204,14 @@ namespace TicTacToe {
   }
 
   void Game::debug(void) {
-    Cell o = Cell::Circle;
-    Cell x = Cell::Cross;
-    Cell n = Cell::None;
-    grid_ = {
-      {o, x, o},
-      {o, n, x},
-      {x, x, x}
-    };
-    calc_result();
-    if (winner_) Console << static_cast<int>(*winner_);
-    else Console << none;
+    Console << U"--------------------";
+    for (size_t h = 0; h < grid_.height(); h++) {
+      String str = U"";
+      for (size_t w = 0; w < grid_.width(); w++) {
+        str += (grid_[h][w] == Cell::None ? U"." : grid_[h][w] == Cell::Circle ? U"O" : U"X");
+      }
+      Console << str;
+    }
   }
-
 };
 

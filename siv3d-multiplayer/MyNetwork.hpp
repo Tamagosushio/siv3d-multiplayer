@@ -11,6 +11,7 @@ public:
 
   void update_game(void);
   void draw(void) const;
+  void debug(void);
 
 private:
 
@@ -69,6 +70,10 @@ void MyNetwork::update_game(void) {
 
 void MyNetwork::draw(void) const {
   game.draw();
+}
+
+void MyNetwork::debug(void) {
+  game.debug();
 }
 
 
@@ -192,7 +197,7 @@ void MyNetwork::leaveRoomEventAction(
       Print << U"- [{}] {} (ID: {}) {}"_fmt(player.localID, player.userName, player.userID, player.isHost ? U"(host)" : U"");
     }
   }
-  game.initialize(0, TicTacToe::Cell::None);
+  game.reset();
 }
 
 void MyNetwork::leaveRoomReturn(
@@ -209,7 +214,7 @@ void MyNetwork::leaveRoomReturn(
     }
     return;
   }
-  game.initialize(0, TicTacToe::Cell::None);
+  game.reset();
 }
 
 
