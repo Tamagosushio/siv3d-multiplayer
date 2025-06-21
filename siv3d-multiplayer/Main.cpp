@@ -6,15 +6,18 @@ void Main() {
   const std::string secretAppID{ SIV3D_OBFUSCATE(PHOTON_APP_ID) };
   TicTacToe::Network network{ secretAppID, U"1.0", Verbose::Yes };
 
+  TextEditState user_name{ U"UserName" };
+
   while (System::Update()) {
     network.update();    
     network.update_game();
     network.draw();
     //network.debug();
 
+    SimpleGUI::TextBoxAt(user_name, Vec2{ Scene::CenterF().x, 50 }, 200, unspecified, (not network.isActive()));
+
     if (SimpleGUI::Button(U"Connect", Vec2{ 1000, 20 }, 160, (not network.isActive()))) {
-      const String userName = U"Siv";
-      network.connect(userName, U"jp");
+      network.connect(user_name.text, U"jp");
     }
     if (SimpleGUI::Button(U"Disconnect", Vec2{ 1000, 60 }, 160, network.isActive())) {
       network.disconnect();
