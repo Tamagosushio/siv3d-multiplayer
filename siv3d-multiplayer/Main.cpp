@@ -1,11 +1,10 @@
 ﻿# include <Siv3D.hpp>
 # include "TicTacToe.hpp"
-# include "MyNetwork.hpp"
 
 void Main() {
   Window::Resize(1280, 720);
   const std::string secretAppID{ SIV3D_OBFUSCATE(PHOTON_APP_ID) };
-  MyNetwork network{ secretAppID, U"1.0", Verbose::Yes };
+  TicTacToe::Network network{ secretAppID, U"1.0", Verbose::Yes };
 
   while (System::Update()) {
     network.update();    
@@ -21,7 +20,7 @@ void Main() {
       network.disconnect();
     }
     if (SimpleGUI::Button(U"Join Room", Vec2{ 1000, 100 }, 160, network.isInLobby())) {
-      network.joinRandomRoom(MyNetwork::MaxPlayers);
+      network.joinRandomRoom(TicTacToe::Network::MaxPlayers);
     }
     if (SimpleGUI::Button(U"Leave Room", Vec2{ 1000, 140 }, 160, network.isInRoom())) {
       network.leaveRoom();
