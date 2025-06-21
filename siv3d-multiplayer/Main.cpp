@@ -14,7 +14,7 @@ void Main() {
 
     if (SimpleGUI::Button(U"Connect", Vec2{ 1000, 20 }, 160, (not network.isActive()))) {
       const String userName = U"Siv";
-      network.connect(userName);
+      network.connect(userName, U"jp");
     }
     if (SimpleGUI::Button(U"Disconnect", Vec2{ 1000, 60 }, 160, network.isActive())) {
       network.disconnect();
