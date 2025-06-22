@@ -52,6 +52,9 @@ namespace TicTacToe {
     void update(void); // 盤面の更新
     Optional<Operation> get_operation(void) const; // 操作情報を取得
     void debug(void); // デバッグ表示
+    bool is_started(void) { return is_started_; }
+    bool is_turn(void) { return is_turn_; }
+    bool is_finished(void) { return is_finished_; }
   };
   Point Game::get_cell_point_(const size_t y, const size_t x) const {
     return Point(x * cell_size_, y * cell_size_) + cell_offset_;
@@ -207,12 +210,6 @@ namespace TicTacToe {
   }
 
   class Network : public Multiplayer_Photon {
-  public:
-    static constexpr int32 MaxPlayers = 2;
-    using Multiplayer_Photon::Multiplayer_Photon;
-    void update_game(void); // ゲーム情報を更新
-    void draw(void) const; // 描画
-    void debug(void); // デバッグ表示
   private:
     Array<LocalPlayer> m_localPlayers;
     Game game; // ゲーム情報
@@ -259,7 +256,15 @@ namespace TicTacToe {
       const uint8 eventCode,
       Deserializer<MemoryViewReader>& reader
     ) override;
-
+  public:
+    static constexpr int32 MaxPlayers = 2;
+    using Multiplayer_Photon::Multiplayer_Photon;
+    void update_game(void); // ゲーム情報を更新
+    void draw(void) const; // 描画
+    void debug(void); // デバッグ表示
+    bool is_started(void) { return game.is_started(); }
+    bool is_turn(void) { return game.is_turn(); }
+    bool is_finished(void) { return game.is_finished(); }
   };
 
   void Network::update_game(void) {

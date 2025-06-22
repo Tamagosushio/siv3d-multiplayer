@@ -11,9 +11,9 @@ App/engine
 App/example
 App/icon.ico
 App/Resource.rc
-App/answer.json
 App/*.exe
 Intermediate
 .vs
 *.env
 *.SECRET
+SushiGUI*
