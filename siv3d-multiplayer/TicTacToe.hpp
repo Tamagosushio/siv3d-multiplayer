@@ -200,6 +200,7 @@ namespace TicTacToe {
   }
   void Game::debug(void) {
     Console << U"--------------------";
+    Console << U"is_started:{}, is_turn:{}, is_finished:{}, "_fmt(is_started(), is_turn(), is_finished());
     for (size_t h = 0; h < grid_.height(); h++) {
       String str = U"";
       for (size_t w = 0; w < grid_.width(); w++) {
@@ -286,6 +287,7 @@ namespace TicTacToe {
   }
   void Network::debug(void) {
     game.debug();
+    Console << U"UserID:{}, RoomName:{}"_fmt(getUserID(), getCurrentRoomName());
   }
 
   void Network::connectReturn(
