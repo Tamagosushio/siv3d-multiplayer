@@ -5,15 +5,23 @@
 
 const std::string secretAppID{ SIV3D_OBFUSCATE(PHOTON_APP_ID) };
 
+std::unique_ptr<IGame> create_game_instance(const String& game_type) {
+  if (game_type == U"TicTacToe") return std::make_unique<TicTacToe::Game>();
+  else nullptr;
+}
+
 struct GameData {
   // チュートリアルに沿った新しいコンストラクタでインスタンスを生成
   OnlineManager onlineManager{ secretAppID, U"1.0", Verbose::Yes };
-  // ゲームロジックのインスタンスを作成
-  TicTacToe::Game ticTacToeGame;
-  // コンストラクタで、ネットワークとゲームロジックを相互に接続する
-  GameData() {
-    onlineManager.set_game_handler(&ticTacToeGame);
-    ticTacToeGame.set_network(&onlineManager);
+  // IGameインターフェースのスマートポインタ
+  std::unique_ptr<IGame> game = nullptr;
+  // ゲームインスタンスを生成し、ネットワークとゲームロジックを相互に接続する
+  void create_and_wire_game(const String& game_type) {
+    game = create_game_instance(game_type);
+    if (game) {
+      onlineManager.set_game_handler(game.get());
+      game->set_network(&onlineManager);
+    }
   }
 };
 
@@ -27,17 +35,20 @@ private:
   Font font{ FontMethod::MSDF, 32, Typeface::Bold };
   Font font_small{ FontMethod::MSDF, 24, Typeface::Bold };
   Font font_title{ FontMethod::MSDF, 48, Typeface::Bold };
+  size_t selected_game_type_idx = 0;
+  Array<String> game_types{ U"TicTacToe" };
 public:
-  NetworkScene(const InitData& init) : IScene{ init } {}
-
+  NetworkScene(const InitData& init) : IScene{ init } {
+    getData().game = nullptr;
+  }
   void update() override {
     auto& manager = getData().onlineManager;
-    auto& game = getData().ticTacToeGame;
     // ネットワークの状態を常に更新
     manager.update();
     // ゲームが始まったらGameSceneに遷移
-    if (game.is_started() and not game.is_finished()) {
+    if (getData().game and getData().game->is_started()) {
       changeScene(U"GameScene");
+      return;
     }
     // [接続前] ユーザ名入力と接続ボタン
     if (not manager.isActive()) {
@@ -55,9 +66,12 @@ public:
     if (manager.isInLobby()) {
       // ルーム作成
       SimpleGUI::TextBoxAt(room_name, { 200, Scene::Height() - 50 }, 250);
+      SimpleGUI::RadioButtons(selected_game_type_idx, game_types, { 200, Scene::Height() - 60 });
       if (SimpleGUI::Button(U"Create Room", { 470, Scene::Height() - 50 }, 200)){
-        if (not room_name.text.isEmpty()) {
-          manager.createRoom(room_name.text, game.get_max_players());
+        const String selected_game = game_types[selected_game_type_idx];
+        getData().create_and_wire_game(selected_game);
+        if (getData().game and not room_name.text.isEmpty()) {
+          manager.createRoom(room_name.text, getData().game->get_max_players());
         }
       }
       // ルーム一覧表示と参加
