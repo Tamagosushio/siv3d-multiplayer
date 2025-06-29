@@ -34,7 +34,6 @@ namespace TicTacToe {
     bool is_started_ = false; // ゲームが開始されているか
     bool is_turn_ = false; // 自分のターンであるか
     bool is_finished_ = false; // ゲームが終了しているか
-    bool is_ready_ = false; // ゲームシーンに遷移可能か
     Optional<Cell> winner_ = none; // ゲームの勝者
     Font font_detail_{ FontMethod::MSDF, 256, Typeface::Bold }; // ゲームに関わるテキストのフォント
     Font font_symbol_{ FontMethod::MSDF, static_cast<int32>(cell_size_), Typeface::Bold }; // 盤面記号描画のフォント
@@ -49,7 +48,18 @@ namespace TicTacToe {
     void set_network(OnlineManager* network) override {
       network_ = network;
     }
-    uint32 get_max_players(void) const override;
+    String get_game_id(void) const override {
+      return U"TicTacToe";
+    }
+    uint8 get_max_players(void) const override {
+      return 2;
+    }
+    bool is_started(void) const override {
+      return is_started_;
+    }
+    bool is_finished(void) const override {
+      return is_finished_;
+    }
     void update(void) override;
     void draw(void) const override;
     void debug(void) override;
@@ -59,8 +69,6 @@ namespace TicTacToe {
     void on_event_received(LocalPlayerID player_id, uint8 event_code, Deserializer<MemoryViewReader>& reader) override;
     void initialize(const size_t grid_size, const Cell player_symbol);
     void reset(void);
-    bool is_started(void) const override;
-    bool is_finished(void) const override;
   };
 
   Point Game::get_cell_point_(const size_t y, const size_t x) const {
@@ -76,9 +84,18 @@ namespace TicTacToe {
     if (grid_.isEmpty() or is_finished_) return;
     grid_[op.pos] = op.cell_type;
     is_turn_ = (player_symbol_ != op.cell_type);
+    const bool is_finished_pre_ = is_finished_;
     calc_result_();
     if (winner_) {
       is_finished_ = true;
+    }
+    // ゲームが終了状態に切り替わった瞬間を検知
+    if (is_finished_ and not is_finished_pre_) {
+      // ホストだけがルームを閉じる
+      if (network_ and network_->isHost()) {
+        network_->set_room_open(false);
+        network_->set_room_visible(false);
+      }
     }
   }
   Optional<Operation> Game::get_operation_() const {
@@ -141,10 +158,6 @@ namespace TicTacToe {
     winner_ = Cell::None; // 引き分け
   }
 
-
-  uint32 Game::get_max_players(void) const {
-    return 2;
-  }
   void Game::update() {
     if (Optional<Operation> op = get_operation_()) {
       if (network_) {
@@ -155,8 +168,11 @@ namespace TicTacToe {
   }
   void Game::on_game_start(const Array<LocalPlayer>& players, bool is_host) {
     initialize(3, is_host ? Cell::Circle : Cell::Cross);
+    if (is_host and network_) network_->set_room_visible(false);
   }
   void Game::on_player_left(LocalPlayerID player_id) {
+    // ゲームが既に終了しているなら、状態をリセットしない
+    if (is_finished_) return;
     reset();
   }
   void Game::on_leave_room() {
@@ -229,12 +245,5 @@ namespace TicTacToe {
     }
   }
   void Game::debug(void) {}
-
-  bool Game::is_started(void) const {
-    return is_started_;
-  }
-  bool Game::is_finished(void) const {
-    return is_finished_;
-  }
 };
 
