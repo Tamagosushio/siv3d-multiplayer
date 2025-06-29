@@ -10,9 +10,12 @@ public:
   /// @brief ネットワークマネージャーのポインタのセッター
   /// @param network ネットワークマネージャーのインスタンス
   virtual void set_network(OnlineManager* network) = 0;
+  /// @brief このゲームの識別子を返す 
+  /// @return ゲームID
+  virtual String get_game_id(void) const = 0;
   /// @brief このゲームの最大プレイヤー数を返す 
   /// @return 最大プレイヤー数
-  virtual uint32 get_max_players(void) const = 0;
+  virtual uint8 get_max_players(void) const = 0;
   /// @brief ゲームの更新処理
   virtual void update(void) = 0;
   /// @brief ゲームの描画処理
