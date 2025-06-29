@@ -1,8 +1,9 @@
 ﻿# include <Siv3D.hpp>
 # include "OnlineManager.hpp"
-# include "TicTacToe.hpp"
 # include "PHOTON_APP_ID.SECRET"
 # include "SushiGUI.hpp"
+# include "TicTacToe.hpp"
+# include "DotsAndBoxes.hpp"
 
 const std::string secretAppID{ SIV3D_OBFUSCATE(PHOTON_APP_ID) };
 
@@ -25,9 +26,13 @@ struct GameData {
   Optional<String> selected_game_id;
   // コンストラクタ
   GameData() {
-    game_infos[U"TicTacToe"] = {
+    game_infos[std::make_unique<TicTacToe::Game>()->get_game_id()] = {
       []() { return std::make_unique<TicTacToe::Game>(); },
       std::make_unique<TicTacToe::Game>()->get_max_players()
+    };
+    game_infos[std::make_unique<DotsAndBoxes::Game>()->get_game_id()] = {
+      []() { return std::make_unique<DotsAndBoxes::Game>(); },
+      std::make_unique<DotsAndBoxes::Game>()->get_max_players()
     };
   }
   void create_game_instance(const String& game_id) {

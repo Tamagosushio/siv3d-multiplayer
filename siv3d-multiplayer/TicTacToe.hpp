@@ -34,7 +34,6 @@ namespace TicTacToe {
     bool is_started_ = false; // ゲームが開始されているか
     bool is_turn_ = false; // 自分のターンであるか
     bool is_finished_ = false; // ゲームが終了しているか
-    bool is_ready_ = false; // ゲームシーンに遷移可能か
     Optional<Cell> winner_ = none; // ゲームの勝者
     Font font_detail_{ FontMethod::MSDF, 256, Typeface::Bold }; // ゲームに関わるテキストのフォント
     Font font_symbol_{ FontMethod::MSDF, static_cast<int32>(cell_size_), Typeface::Bold }; // 盤面記号描画のフォント
