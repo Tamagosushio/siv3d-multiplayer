@@ -35,12 +35,12 @@ namespace DotsAndBoxes {
     Grid<LineColor> horizontal_lines_; // 水平線
     Grid<LineColor> vertical_lines_; // 垂直線
     Grid<LineColor> box_owners_; // 各ボックスはどのプレイヤーのものか管理
-    Size grid_size_{ 5,5 }; // 盤面サイズ（セル数）
-    size_t cell_size_ = 100; // セルの描画サイズ
-    size_t dot_radius_ = 8; // ドットの半径
-    size_t line_thickness_ = 10; // セル周りの線の太さ
+    Size grid_size_{ 6,4 }; // 盤面サイズ（セル数）
+    int32 cell_size_ = 100; // セルの描画サイズ
+    int32 dot_radius_ = 8; // ドットの半径
+    int32 line_thickness_ = 10; // セル周りの線の太さ
     Point board_offset_; // 描画のオフセット
-    HashTable<LineColor, size_t> scores_; // 各プレイヤーの得点
+    HashTable<LineColor, int32> scores_; // 各プレイヤーの得点
     LineColor player_color_ = LineColor::None; // このプレイヤーの色
     bool is_started_ = false;
     bool is_turn_ = false;
@@ -48,7 +48,7 @@ namespace DotsAndBoxes {
     Optional<LineColor> winner_ = none; // ゲームの勝者、引き分け時はNone
     Font font_ui_{ FontMethod::MSDF, 30, Typeface::Bold };
     Font font_result_{ FontMethod::MSDF, 80, Typeface::Bold };
-    Point get_dot_pos_(size_t y, size_t x) const;
+    Point get_dot_pos_(int32 y, int32 x) const;
     Optional<Operation> get_operation_(void) const;
     void operate_(const Operation& op);
     void calc_result_(void);
@@ -61,7 +61,7 @@ namespace DotsAndBoxes {
     bool is_finished(void) const override {return is_finished_;}
     void update(void) override;
     void draw(void) const override;
-    void debug(void) override {}
+    void debug(void) override { Print << grid_size_; }
     void on_game_start(const Array<LocalPlayer>& players, bool is_host) override;
     void on_player_left(LocalPlayerID player_id) override;
     void on_leave_room(void) override;
@@ -70,11 +70,11 @@ namespace DotsAndBoxes {
     void reset(void);
   };
 
-  Point Game::get_dot_pos_(const size_t y, const size_t x) const {
+  inline Point Game::get_dot_pos_(const int32 y, const int32 x) const {
     return Point{ x * cell_size_, y * cell_size_ } + board_offset_;
   }
 
-  void Game::initialize(const Size& grid_size, const LineColor player_color) {
+  inline void Game::initialize(const Size& grid_size, const LineColor player_color) {
     grid_size_ = grid_size;
     horizontal_lines_.assign(grid_size_.y + 1, grid_size_.x, LineColor::None);
     vertical_lines_.assign(grid_size_.y, grid_size_.x + 1, LineColor::None);
@@ -90,7 +90,7 @@ namespace DotsAndBoxes {
     const int32 board_height = grid_size_.y * cell_size_;
     board_offset_ = Scene::Center() - Point{ board_width / 2, board_height / 2 };
   }
-  void Game::reset(void) {
+  inline void Game::reset(void) {
     horizontal_lines_.clear();
     vertical_lines_.clear();
     box_owners_.clear();
@@ -102,18 +102,18 @@ namespace DotsAndBoxes {
     winner_ = none;
   }
 
-  void Game::on_game_start(const Array<LocalPlayer>& players, bool is_host) {
+  inline void Game::on_game_start(const Array<LocalPlayer>& players, bool is_host) {
     initialize(grid_size_, is_host ? LineColor::Red : LineColor::Blue);
     if (is_host and network_) network_->set_room_visible(false);
   }
-  void Game::on_player_left(LocalPlayerID player_id) {
+  inline void Game::on_player_left(LocalPlayerID player_id) {
     if (is_finished_) return;
     reset();
   }
-  void Game::on_leave_room(void) {
+  inline void Game::on_leave_room(void) {
     reset();
   }
-  void Game::on_event_received(LocalPlayerID player_id, uint8 event_code, Deserializer<MemoryViewReader>& reader) {
+  inline void Game::on_event_received(LocalPlayerID player_id, uint8 event_code, Deserializer<MemoryViewReader>& reader) {
     if (event_code == Operation::code) {
       Operation op;
       reader(op);
@@ -121,18 +121,18 @@ namespace DotsAndBoxes {
     }
   }
 
-  Optional<Operation> Game::get_operation_(void) const {
+  inline Optional<Operation> Game::get_operation_(void) const {
     if (not (is_started_ and is_turn_ and not is_finished_)) return none;
-    for (size_t y : step(grid_size_.y+1)) {
-      for (size_t x : step(grid_size_.x)) {
+    for (int32 y : step(grid_size_.y+1)) {
+      for (int32 x : step(grid_size_.x)) {
         if (horizontal_lines_.at(y,x) == LineColor::None) {
           const RectF line_rectf{ get_dot_pos_(y,x), cell_size_, line_thickness_ };
           if (line_rectf.leftClicked()) return Operation{ Point{x,y}, LineDirection::Top };
         }
       }
     }
-    for (size_t y : step(grid_size_.y)) {
-      for (size_t x : step(grid_size_.x+1)) {
+    for (int32 y : step(grid_size_.y)) {
+      for (int32 x : step(grid_size_.x+1)) {
         if (vertical_lines_.at(y, x) == LineColor::None) {
           const RectF line_rectf{ get_dot_pos_(y,x), line_thickness_, cell_size_ };
           if (line_rectf.leftClicked()) return Operation{ Point{x,y}, LineDirection::Left };
@@ -141,17 +141,15 @@ namespace DotsAndBoxes {
     }
     return none;
   }
-  void Game::operate_(const Operation& op) {
+  inline void Game::operate_(const Operation& op) {
     if (is_finished_) return;
     bool box_completed_ = false;
     if (op.dir == LineDirection::Top) {
-      if (not InRange(op.pos.y, 0, grid_size_.y)) return;
-      if (not InRange(op.pos.x, 0, grid_size_.x - 1)) return;
+      if (not horizontal_lines_.inBounds(op.pos)) return;
       if (horizontal_lines_.at(op.pos) != LineColor::None) return;
       horizontal_lines_.at(op.pos) = player_color_;
     } else {
-      if (not InRange(op.pos.y, 0, grid_size_.y - 1)) return;
-      if (not InRange(op.pos.x, 0, grid_size_.x)) return;
+      if (not vertical_lines_.inBounds(op.pos)) return;
       if (vertical_lines_.at(op.pos) != LineColor::None) return;
       vertical_lines_.at(op.pos) = player_color_;
     }
@@ -170,12 +168,12 @@ namespace DotsAndBoxes {
     if (not box_completed_) is_turn_ = not is_turn_;
     calc_result_();
   }
-  void Game::calc_result_(void) {
-    if ((scores_[LineColor::Red] + scores_[LineColor::Blue]) == (grid_size_.area())) {
+  inline void Game::calc_result_(void) {
+    if ((scores_.at(LineColor::Red) + scores_.at(LineColor::Blue)) == (grid_size_.area())) {
       is_finished_ = true;
-      if (scores_[LineColor::Red] > scores_[LineColor::Blue]) {
+      if (scores_.at(LineColor::Red) > scores_.at(LineColor::Blue)) {
         winner_ = LineColor::Red;
-      } else if (scores_[LineColor::Red] < scores_[LineColor::Blue]) {
+      } else if (scores_.at(LineColor::Red) < scores_.at(LineColor::Blue)) {
         winner_ = LineColor::Blue;
       } else {
         winner_ = LineColor::None;
@@ -187,24 +185,24 @@ namespace DotsAndBoxes {
     }
   }
 
-  void Game::update(void) {
+  inline void Game::update(void) {
     if (Optional<Operation> op = get_operation_()) {
       if (network_) network_->send_game_event(Operation::code, *op);
       operate_(*op);
     }
   }
-  void Game::draw(void) const {
+  inline void Game::draw(void) const {
     if (not is_started_) return;
-    for (size_t y : step(grid_size_.y)) {
-      for (size_t x : step(grid_size_.x)) {
+    for (int32 y : step(grid_size_.y)) {
+      for (int32 x : step(grid_size_.x)) {
         if (box_owners_.at(y, x) != LineColor::None) {
           const ColorF color = (box_owners_[y][x] == LineColor::Red) ? ColorF{ 1.0, 0.5, 0.5, 0.5 } : ColorF{ 0.5, 0.5, 1.0, 0.5 };
           Rect{ get_dot_pos_(y, x), cell_size_ }.draw(color);
         }
       }
     }
-    for (size_t y : step(grid_size_.y + 1)) {
-      for (size_t x : step(grid_size_.x)) {
+    for (int32 y : step(grid_size_.y + 1)) {
+      for (int32 x : step(grid_size_.x)) {
         const LineColor color_type = horizontal_lines_.at(y, x);
         if (color_type != LineColor::None) {
           const ColorF line_color = (color_type == LineColor::Red) ? Palette::Red : Palette::Blue;
@@ -212,8 +210,8 @@ namespace DotsAndBoxes {
         }
       }
     }
-    for (size_t y : step(grid_size_.y)) {
-      for (size_t x : step(grid_size_.x + 1)) {
+    for (int32 y : step(grid_size_.y)) {
+      for (int32 x : step(grid_size_.x + 1)) {
         const LineColor color_type = vertical_lines_.at(y, x);
         if (color_type != LineColor::None) {
           const ColorF line_color = (color_type == LineColor::Red) ? Palette::Red : Palette::Blue;
@@ -221,8 +219,8 @@ namespace DotsAndBoxes {
         }
       }
     }
-    for (size_t y : step(grid_size_.y + 1)) {
-      for (size_t x : step(grid_size_.x + 1)) {
+    for (int32 y : step(grid_size_.y + 1)) {
+      for (int32 x : step(grid_size_.x + 1)) {
         Circle{ get_dot_pos_(y,x), dot_radius_ }.draw(Palette::Gray);
       }
     }

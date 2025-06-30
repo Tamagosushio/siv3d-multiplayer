@@ -45,24 +45,14 @@ namespace TicTacToe {
     void calc_result_(void);
   public:
     Game() = default;
-    void set_network(OnlineManager* network) override {
-      network_ = network;
-    }
-    String get_game_id(void) const override {
-      return U"TicTacToe";
-    }
-    uint8 get_max_players(void) const override {
-      return 2;
-    }
-    bool is_started(void) const override {
-      return is_started_;
-    }
-    bool is_finished(void) const override {
-      return is_finished_;
-    }
+    void set_network(OnlineManager* network) override {network_ = network;}
+    String get_game_id(void) const override {return U"TicTacToe";}
+    uint8 get_max_players(void) const override {return 2;}
+    bool is_started(void) const override {return is_started_;}
+    bool is_finished(void) const override {return is_finished_;}
     void update(void) override;
     void draw(void) const override;
-    void debug(void) override;
+    void debug(void) override {}
     void on_game_start(const Array<LocalPlayer>& players, bool is_host) override;
     void on_player_left(LocalPlayerID player_id) override;
     void on_leave_room(void) override;
@@ -71,16 +61,16 @@ namespace TicTacToe {
     void reset(void);
   };
 
-  Point Game::get_cell_point_(const size_t y, const size_t x) const {
+  inline Point Game::get_cell_point_(const size_t y, const size_t x) const {
     return Point(x * cell_size_, y * cell_size_) + cell_offset_;
   }
-  Rect Game::get_cell_rect_(const Point& pos) const {
+  inline Rect Game::get_cell_rect_(const Point& pos) const {
     return get_cell_rect_(pos.y, pos.x);
   }
-  Rect Game::get_cell_rect_(const size_t y, const size_t x) const {
+  inline Rect Game::get_cell_rect_(const size_t y, const size_t x) const {
     return Rect{get_cell_point_(y, x), cell_size_};
   }
-  void Game::operate_(const Operation& op) {
+  inline void Game::operate_(const Operation& op) {
     if (grid_.isEmpty() or is_finished_) return;
     grid_[op.pos] = op.cell_type;
     is_turn_ = (player_symbol_ != op.cell_type);
@@ -98,7 +88,7 @@ namespace TicTacToe {
       }
     }
   }
-  Optional<Operation> Game::get_operation_() const {
+  inline Optional<Operation> Game::get_operation_() const {
     if (not (is_started_ and is_turn_ and not is_finished_)) return none;
     for (size_t h : step(grid_.height())) {
       for (size_t w : step(grid_.width())) {
@@ -109,7 +99,7 @@ namespace TicTacToe {
     }
     return none;
   }
-  void Game::calc_result_(void) {
+  inline void Game::calc_result_(void) {
     std::function<Optional<Cell>(std::function<Cell(size_t)>, size_t)> check_line
       = [](std::function<Cell(size_t)> get_cell, size_t count) -> Optional<Cell> {
       Cell first = get_cell(0);
@@ -158,7 +148,7 @@ namespace TicTacToe {
     winner_ = Cell::None; // 引き分け
   }
 
-  void Game::update() {
+  inline void Game::update() {
     if (Optional<Operation> op = get_operation_()) {
       if (network_) {
         network_->send_game_event(Operation::code, *op);
@@ -166,26 +156,26 @@ namespace TicTacToe {
       operate_(*op);
     }
   }
-  void Game::on_game_start(const Array<LocalPlayer>& players, bool is_host) {
+  inline void Game::on_game_start(const Array<LocalPlayer>& players, bool is_host) {
     initialize(3, is_host ? Cell::Circle : Cell::Cross);
     if (is_host and network_) network_->set_room_visible(false);
   }
-  void Game::on_player_left(LocalPlayerID player_id) {
+  inline void Game::on_player_left(LocalPlayerID player_id) {
     // ゲームが既に終了しているなら、状態をリセットしない
     if (is_finished_) return;
     reset();
   }
-  void Game::on_leave_room() {
+  inline void Game::on_leave_room() {
     reset();
   }
-  void Game::on_event_received(const LocalPlayerID player_id, const uint8 event_code, Deserializer<MemoryViewReader>& reader) {
+  inline void Game::on_event_received(const LocalPlayerID player_id, const uint8 event_code, Deserializer<MemoryViewReader>& reader) {
     if (event_code == Operation::code) {
       Operation op;
       reader(op);
       operate_(op);
     }
   }
-  void Game::initialize(const size_t grid_size, Cell player_symbol) {
+  inline void Game::initialize(const size_t grid_size, Cell player_symbol) {
     grid_.assign(grid_size, grid_size, Cell::None);
     player_symbol_ = player_symbol;
     is_started_ = true;
@@ -193,7 +183,7 @@ namespace TicTacToe {
     is_finished_ = false;
     winner_ = none;
   }
-  void Game::reset() {
+  inline void Game::reset() {
     grid_.clear();
     player_symbol_ = Cell::None;
     is_started_ = false;
@@ -201,7 +191,7 @@ namespace TicTacToe {
     is_finished_ = false;
     winner_ = none;
   }
-  void Game::draw(void) const {
+  inline void Game::draw(void) const {
     if (not is_started_) return;
     for (size_t h = 0; h < grid_.height(); h++) {
       for (size_t w = 0; w < grid_.width(); w++) {
@@ -244,6 +234,5 @@ namespace TicTacToe {
       );
     }
   }
-  void Game::debug(void) {}
 };
 
