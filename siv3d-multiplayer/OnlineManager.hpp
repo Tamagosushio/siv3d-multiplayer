@@ -82,7 +82,7 @@ public:
   void debug(void) const {};
 };
 
-void OnlineManager::connectReturn(
+inline void OnlineManager::connectReturn(
   [[maybe_unused]] const int32 errorCode, const String& errorString,
   const String& region, [[maybe_unused]] const String& cluster) {
 
@@ -97,12 +97,12 @@ void OnlineManager::connectReturn(
   }
 }
 
-void OnlineManager::disconnectReturn() {
+inline void OnlineManager::disconnectReturn() {
   if (m_verbose) Print << U"OnlineManager::disconnectReturn()";
   local_players_.clear();
 }
 
-void OnlineManager::joinRandomRoomReturn(
+inline void OnlineManager::joinRandomRoomReturn(
   [[maybe_unused]] const LocalPlayerID playerID, const int32 errorCode, const String& errorString) {
 
   if (m_verbose) Print << U"OnlineManager::joinRandomRoomReturn()";
@@ -123,7 +123,7 @@ void OnlineManager::joinRandomRoomReturn(
   }
 }
 
-void OnlineManager::createRoomReturn(
+inline void OnlineManager::createRoomReturn(
   [[maybe_unused]] const LocalPlayerID playerID, const int32 errorCode, const String& errorString) {
 
   if (m_verbose) Print << U"OnlineManager::createRoomReturn()";
@@ -132,7 +132,7 @@ void OnlineManager::createRoomReturn(
   }
 }
 
-void OnlineManager::joinRoomEventAction(
+inline void OnlineManager::joinRoomEventAction(
   const LocalPlayer& newPlayer, [[maybe_unused]] const Array<LocalPlayerID>& playerIDs, const bool isSelf) {
 
   if (m_verbose) Print << U"OnlineManager::joinRoomEventAction()";
@@ -143,7 +143,7 @@ void OnlineManager::joinRoomEventAction(
   }
 }
 
-void OnlineManager::leaveRoomEventAction(const LocalPlayerID playerID, [[maybe_unused]] const bool isInactive) {
+inline void OnlineManager::leaveRoomEventAction(const LocalPlayerID playerID, [[maybe_unused]] const bool isInactive) {
   if (m_verbose) Print << U"OnlineManager::leaveRoomEventAction()";
   local_players_ = getLocalPlayers();
   // ゲームハンドラにプレイヤーの退出を通知
@@ -152,7 +152,7 @@ void OnlineManager::leaveRoomEventAction(const LocalPlayerID playerID, [[maybe_u
   }
 }
 
-void OnlineManager::leaveRoomReturn(
+inline void OnlineManager::leaveRoomReturn(
   [[maybe_unused]] int32 errorCode, [[maybe_unused]] const String& errorString) {
 
   if (m_verbose) Print << U"OnlineManager::leaveRoomReturn()";
@@ -163,7 +163,7 @@ void OnlineManager::leaveRoomReturn(
   }
 }
 
-void OnlineManager::customEventAction(
+inline void OnlineManager::customEventAction(
   const LocalPlayerID playerID, const uint8 eventCode, Deserializer<MemoryViewReader>& reader) {
 
   // ゲームハンドラにイベント受信をそのまま通知

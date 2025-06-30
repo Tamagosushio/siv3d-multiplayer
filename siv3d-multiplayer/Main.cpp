@@ -159,7 +159,11 @@ public:
 // ゲーム本体のシーン
 class GameScene : public App::Scene {
 public:
-  GameScene(const InitData& init) : IScene{ init } {}
+  GameScene(const InitData& init) : IScene{ init } {
+    Console << U"GameScene()";
+    Console << getData().current_game->get_game_id();
+    getData().current_game->debug();
+  }
   void update() override {
     auto& manager = getData().online_manager;
     auto& game = getData().current_game;
