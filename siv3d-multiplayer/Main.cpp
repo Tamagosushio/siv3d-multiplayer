@@ -58,11 +58,8 @@ private:
   Font font_small{ FontMethod::MSDF, 24, Typeface::Bold };
   Font font_title{ FontMethod::MSDF, 48, Typeface::Bold };
   size_t selected_game_type_idx = 0;
-  Array<String> game_types{ U"TicTacToe" };
 public:
-  NetworkScene(const InitData& init) : IScene{ init } {
-    getData().game = nullptr;
-  }
+  NetworkScene(const InitData& init) : IScene{ init } {}
   void update() override {
     auto& manager = getData().online_manager;
     auto& game_data = getData();
@@ -162,11 +159,7 @@ public:
 // ゲーム本体のシーン
 class GameScene : public App::Scene {
 public:
-  GameScene(const InitData& init) : IScene{ init } {
-    Console << U"GameScene()";
-    Console << getData().current_game->get_game_id();
-    getData().current_game->debug();
-  }
+  GameScene(const InitData& init) : IScene{ init } {}
   void update() override {
     auto& manager = getData().online_manager;
     auto& game = getData().current_game;

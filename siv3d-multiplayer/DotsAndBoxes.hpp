@@ -20,12 +20,13 @@ namespace DotsAndBoxes {
     constexpr static uint8 code = 42;
     Point pos;
     LineDirection dir;
+    LineColor line_color;
     Operation() = default;
-    Operation(const Point& pos, const LineDirection& dir)
-      : pos(pos), dir(dir) {}
+    Operation(const Point& pos, const LineDirection& dir, const LineColor& line_color)
+      : pos(pos), dir(dir), line_color(line_color) {}
     template<class Archive>
     void SIV3D_SERIALIZE(Archive& archive) {
-      archive(pos, dir);
+      archive(pos, dir, line_color);
     }
   };
 
@@ -53,7 +54,7 @@ namespace DotsAndBoxes {
     void operate_(const Operation& op);
     void calc_result_(void);
   public:
-    Game() = default;
+    Game() {};
     void set_network(OnlineManager* network) override {network_ = network;}
     String get_game_id(void) const override {return U"DotsAndBoxes";}
     uint8 get_max_players(void) const override {return 2;}
@@ -61,7 +62,7 @@ namespace DotsAndBoxes {
     bool is_finished(void) const override {return is_finished_;}
     void update(void) override;
     void draw(void) const override;
-    void debug(void) override { Print << grid_size_; }
+    void debug(void) override {}
     void on_game_start(const Array<LocalPlayer>& players, bool is_host) override;
     void on_player_left(LocalPlayerID player_id) override;
     void on_leave_room(void) override;
@@ -76,8 +77,8 @@ namespace DotsAndBoxes {
 
   inline void Game::initialize(const Size& grid_size, const LineColor player_color) {
     grid_size_ = grid_size;
-    horizontal_lines_.assign(grid_size_.y + 1, grid_size_.x, LineColor::None);
-    vertical_lines_.assign(grid_size_.y, grid_size_.x + 1, LineColor::None);
+    horizontal_lines_.assign(grid_size_.x, grid_size_.y + 1, LineColor::None);
+    vertical_lines_.assign(grid_size_.x + 1, grid_size_.y, LineColor::None);
     box_owners_.assign(grid_size_, LineColor::None);
     scores_[LineColor::Red] = 0;
     scores_[LineColor::Blue] = 0;
@@ -127,7 +128,7 @@ namespace DotsAndBoxes {
       for (int32 x : step(grid_size_.x)) {
         if (horizontal_lines_.at(y,x) == LineColor::None) {
           const RectF line_rectf{ get_dot_pos_(y,x), cell_size_, line_thickness_ };
-          if (line_rectf.leftClicked()) return Operation{ Point{x,y}, LineDirection::Top };
+          if (line_rectf.leftClicked()) return Operation{ Point{x,y}, LineDirection::Top, player_color_ };
         }
       }
     }
@@ -135,31 +136,31 @@ namespace DotsAndBoxes {
       for (int32 x : step(grid_size_.x+1)) {
         if (vertical_lines_.at(y, x) == LineColor::None) {
           const RectF line_rectf{ get_dot_pos_(y,x), line_thickness_, cell_size_ };
-          if (line_rectf.leftClicked()) return Operation{ Point{x,y}, LineDirection::Left };
+          if (line_rectf.leftClicked()) return Operation{ Point{x,y}, LineDirection::Left, player_color_ };
         }
       }
     }
     return none;
   }
   inline void Game::operate_(const Operation& op) {
-    if (is_finished_) return;
+    if (not is_started_ or is_finished_) return;
     bool box_completed_ = false;
     if (op.dir == LineDirection::Top) {
       if (not horizontal_lines_.inBounds(op.pos)) return;
       if (horizontal_lines_.at(op.pos) != LineColor::None) return;
-      horizontal_lines_.at(op.pos) = player_color_;
+      horizontal_lines_.at(op.pos) = op.line_color;
     } else {
       if (not vertical_lines_.inBounds(op.pos)) return;
       if (vertical_lines_.at(op.pos) != LineColor::None) return;
-      vertical_lines_.at(op.pos) = player_color_;
+      vertical_lines_.at(op.pos) = op.line_color;
     }
     for (size_t y : step(grid_size_.y)) {
       for (size_t x : step(grid_size_.x)) {
         if (box_owners_.at(y, x) == LineColor::None) {
           if (horizontal_lines_.at(y, x) != LineColor::None and horizontal_lines_.at(y + 1, x) != LineColor::None
            and vertical_lines_.at(y, x) != LineColor::None and vertical_lines_.at(y, x + 1) != LineColor::None) {
-            box_owners_.at(y, x) = player_color_;
-            scores_[player_color_]++;
+            box_owners_.at(y, x) = op.line_color;
+            scores_[op.line_color]++;
             box_completed_ = true;
           }
         }
