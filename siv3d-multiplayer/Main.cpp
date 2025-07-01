@@ -94,17 +94,18 @@ public:
       return; // 接続前は以降の処理を行わない
     }
     // [接続後] 切断ボタン
-    if (manager.isActive() and SushiGUI::button1(font, U"Disconnect", { Scene::Width() - 170, 20 }, Vec2{150, 40})) {
+    if (manager.isActive() and SushiGUI::button1(font, U"Disconnect", { Scene::Width() - 170, Scene::Height() - 60 }, Vec2{150, 40})) {
       manager.disconnect();
       game_data.reset_game_instance();
     }
-    // [ロビー内]
+    // [ロビー内] ゲーム選択
     if (manager.isInLobby()) {
-      font_title(U"Select Game").drawAt(Scene::CenterF().x, 60);
-      Vec2 game_select_pos{ Scene::CenterF().x - 250, 100 };
+      int32 game_height = 40;
+      font_title(U"Select Game").drawAt(Scene::Width() * 0.25, 60);
+      Vec2 game_select_pos{ Scene::Width() * 0.25, 60 + game_height };
       for (const auto& pair : game_data.game_infos) {
         const String& game_id = pair.first;
-        const RectF region{ game_select_pos, 500, 40 };
+        const RectF region{ Arg::topCenter(game_select_pos), { Scene::CenterF().x * 0.80, game_height } };
         if (game_data.selected_game_id and *game_data.selected_game_id == game_id) {
           region.draw(Palette::Orange);
         }
@@ -117,7 +118,7 @@ public:
         }
         region.drawFrame(2);
         font(game_id).drawAt(region.center(), Palette::Black);
-        game_select_pos.y += 45;
+        game_select_pos.y += game_height;
       }
       if (not game_data.selected_game_id) return;
       // ルーム作成
@@ -134,22 +135,24 @@ public:
       // ランダムマッチ
       if (SushiGUI::button4(font, U"Join Random", lobby_action_pos.movedBy(640, 0), Vec2{200, 50})) {
         game_data.create_game_instance(*game_data.selected_game_id);
+
         if (game_data.current_game) {
           manager.join_random_game_room(*game_data.selected_game_id);
         }
       }
       // ルーム一覧表示と参加
-      font_title(U"Room List").drawAt(Scene::CenterF().x, 200);
-      Vec2 room_list_pos{ Scene::CenterF().x - 300, 250 };
+      int32 room_height = 40;
+      font_title(U"Room List").drawAt(Scene::Width() * 0.75, 60);
+      Vec2 room_list_pos{ Scene::Width() * 0.75, 60+room_height };
       for (const auto& room_name : manager.getRoomNameList()) {
-        const RectF region{ room_list_pos, 600, 40 };
+        const RectF region{ Arg::topCenter(room_list_pos), { Scene::CenterF().x * 0.80, room_height } };
         if (SushiGUI::button4(font_title, room_name, region)) {
           if (auto game_id = RoomNameHelper::get_game_id(room_name)) {
             game_data.create_game_instance(*game_id);
             if (game_data.current_game) manager.joinRoom(room_name);
           }
         }
-        room_list_pos.y += 40;
+        room_list_pos.y += room_height;
       }
     }
   }
