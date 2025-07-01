@@ -158,6 +158,8 @@ public:
 
 // ゲーム本体のシーン
 class GameScene : public App::Scene {
+private:
+  Font font_title{ FontMethod::MSDF, 48, Typeface::Bold };
 public:
   GameScene(const InitData& init) : IScene{ init } {}
   void update() override {
@@ -173,7 +175,7 @@ public:
     game->update();
     // ゲームが終了したらNetworkSceneに戻る
     if (game->is_finished()) {
-      if (SimpleGUI::Button(U"Back to Lobby", Scene::CenterF().movedBy(0, 200))){
+      if (SushiGUI::button3(font_title, U"Back to Lobby", Arg::bottomCenter_(Scene::CenterF().withY(Scene::Size().y*0.95)), { Scene::Size().x * 0.2, Scene::Size().y * 0.1 })) {
         manager.leaveRoom();
         getData().reset_game_instance();
         changeScene(U"NetworkScene");

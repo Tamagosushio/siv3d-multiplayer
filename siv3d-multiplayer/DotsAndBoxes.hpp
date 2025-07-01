@@ -47,12 +47,14 @@ namespace DotsAndBoxes {
     bool is_turn_ = false;
     bool is_finished_ = false;
     Optional<LineColor> winner_ = none; // ゲームの勝者、引き分け時はNone
-    Font font_ui_{ FontMethod::MSDF, 30, Typeface::Bold };
-    Font font_result_{ FontMethod::MSDF, 80, Typeface::Bold };
+    Font font_ui_{ FontMethod::MSDF, 64, Typeface::Bold };
+    Font font_result_{ FontMethod::MSDF, 128, Typeface::Bold };
     Point get_dot_pos_(int32 y, int32 x) const;
     Optional<Operation> get_operation_(void) const;
     void operate_(const Operation& op);
     void calc_result_(void);
+    ColorF get_line_color_(const LineColor color) const;
+    Quad get_grid_line_quad_(const Point& pos, const LineDirection dir) const;
   public:
     Game() {};
     void set_network(OnlineManager* network) override {network_ = network;}
@@ -74,6 +76,18 @@ namespace DotsAndBoxes {
   inline Point Game::get_dot_pos_(const int32 y, const int32 x) const {
     return Point{ x * cell_size_, y * cell_size_ } + board_offset_;
   }
+  inline ColorF Game::get_line_color_(const LineColor color) const {
+    if (color == LineColor::Red) return Palette::Red;
+    else if (color == LineColor::Blue) return Palette::Blue;
+    else return Palette::Gray;
+  }
+  inline Quad Game::get_grid_line_quad_(const Point& pos, const LineDirection dir) const {
+    if (dir == LineDirection::Top) {
+      return Line{ get_dot_pos_(pos.y, pos.x), get_dot_pos_(pos.y, pos.x + 1) }.withThickness(line_thickness_);
+    } else if (dir == LineDirection::Left) {
+      return Line{ get_dot_pos_(pos.y, pos.x), get_dot_pos_(pos.y + 1, pos.x) }.withThickness(line_thickness_);
+    }
+  }
 
   inline void Game::initialize(const Size& grid_size, const LineColor player_color) {
     grid_size_ = grid_size;
@@ -87,6 +101,7 @@ namespace DotsAndBoxes {
     is_started_ = true;
     is_finished_ = false;
     winner_ = none;
+    cell_size_ = (Scene::Size() / grid_size_).minComponent() * 0.65;
     const int32 board_width = grid_size_.x * cell_size_;
     const int32 board_height = grid_size_.y * cell_size_;
     board_offset_ = Scene::Center() - Point{ board_width / 2, board_height / 2 };
@@ -127,16 +142,18 @@ namespace DotsAndBoxes {
     for (int32 y : step(grid_size_.y+1)) {
       for (int32 x : step(grid_size_.x)) {
         if (horizontal_lines_.at(y,x) == LineColor::None) {
-          const RectF line_rectf{ get_dot_pos_(y,x), cell_size_, line_thickness_ };
-          if (line_rectf.leftClicked()) return Operation{ Point{x,y}, LineDirection::Top, player_color_ };
+          const Quad line_quad = get_grid_line_quad_({ x,y }, LineDirection::Top);
+          if (line_quad.mouseOver()) Cursor::RequestStyle(CursorStyle::Hand);
+          if (line_quad.leftClicked()) return Operation{ Point{x,y}, LineDirection::Top, player_color_ };
         }
       }
     }
     for (int32 y : step(grid_size_.y)) {
       for (int32 x : step(grid_size_.x+1)) {
         if (vertical_lines_.at(y, x) == LineColor::None) {
-          const RectF line_rectf{ get_dot_pos_(y,x), line_thickness_, cell_size_ };
-          if (line_rectf.leftClicked()) return Operation{ Point{x,y}, LineDirection::Left, player_color_ };
+          const Quad line_quad = get_grid_line_quad_({ x,y }, LineDirection::Left);
+          if (line_quad.mouseOver()) Cursor::RequestStyle(CursorStyle::Hand);
+          if (line_quad.leftClicked()) return Operation{ Point{x,y}, LineDirection::Left, player_color_ };
         }
       }
     }
@@ -205,19 +222,19 @@ namespace DotsAndBoxes {
     for (int32 y : step(grid_size_.y + 1)) {
       for (int32 x : step(grid_size_.x)) {
         const LineColor color_type = horizontal_lines_.at(y, x);
-        if (color_type != LineColor::None) {
-          const ColorF line_color = (color_type == LineColor::Red) ? Palette::Red : Palette::Blue;
-          Line{ get_dot_pos_(y,x), get_dot_pos_(y, x + 1) }.draw(line_thickness_, line_color.gamma(0.8));
-        }
+        const ColorF line_color = get_line_color_(color_type);
+        const Quad line_quad = get_grid_line_quad_({ x,y }, LineDirection::Top);
+        if (line_quad.mouseOver() and color_type == LineColor::None) line_quad.draw(line_color.gamma(0.5));
+        else line_quad.draw(line_color.gamma(0.8));
       }
     }
     for (int32 y : step(grid_size_.y)) {
       for (int32 x : step(grid_size_.x + 1)) {
         const LineColor color_type = vertical_lines_.at(y, x);
-        if (color_type != LineColor::None) {
-          const ColorF line_color = (color_type == LineColor::Red) ? Palette::Red : Palette::Blue;
-          Line{ get_dot_pos_(y, x), get_dot_pos_(y + 1, x) }.draw(line_thickness_, line_color.gamma(0.8));
-        }
+        const ColorF line_color = get_line_color_(color_type);
+        const Quad line_quad = get_grid_line_quad_({ x,y }, LineDirection::Left);
+        if (line_quad.mouseOver() and color_type == LineColor::None) line_quad.draw(line_color.gamma(0.5));
+        else line_quad.draw(line_color.gamma(0.8));
       }
     }
     for (int32 y : step(grid_size_.y + 1)) {
@@ -225,19 +242,20 @@ namespace DotsAndBoxes {
         Circle{ get_dot_pos_(y,x), dot_radius_ }.draw(Palette::Gray);
       }
     }
-    font_ui_(U"Red: {}"_fmt(scores_.at(LineColor::Red))).draw(20, Vec2{ 20, 20 }, Palette::Red);
-    font_ui_(U"Blue: {}"_fmt(scores_.at(LineColor::Blue))).draw(20, Vec2{ 20, 60 }, Palette::Blue);
+    font_ui_(U"Red: {}"_fmt(scores_.at(LineColor::Red))).draw(Arg::topRight(Scene::CenterF().movedBy(-20,0).withY(0)), Palette::Red);
+    font_ui_(U"Blue: {}"_fmt(scores_.at(LineColor::Blue))).draw(Arg::topLeft(Scene::CenterF().movedBy(20,0).withY(0)), Palette::Blue);
     if (not is_finished_) {
       const String turn_text = is_turn_ ? U"Your Turn" : U"Opponent's Turn";
       const ColorF turn_color = is_turn_ ? (player_color_ == LineColor::Red ? Palette::Red : Palette::Blue) : Palette::Dimgray;
-      font_ui_(turn_text).draw(Arg::topRight = Scene::Rect().tr().movedBy(-20, 20), turn_color);
+      font_ui_(turn_text).draw(Arg::bottomCenter(Scene::CenterF().withY(Scene::Size().y)), turn_color);
     } else {
       const RectF screen_rect = Scene::Rect();
       screen_rect.draw(ColorF{ 0.0, 0.5 });
       if (winner_) {
-        if (*winner_ == player_color_) font_result_(U"You Win!").drawAt(screen_rect.center());
+        if (*winner_ == LineColor::None) font_result_(U"Draw").drawAt(screen_rect.center());
+        else if (*winner_ == player_color_) font_result_(U"You Win!").drawAt(screen_rect.center());
         else  font_result_(U"You Lose...").drawAt(screen_rect.center());
-      } else font_result_(U"Draw").drawAt(screen_rect.center());
+      }
     }
   }
 
